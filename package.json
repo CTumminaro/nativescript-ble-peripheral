@@ -1,8 +1,8 @@
 {
-  "name": "nativescript-yourplugin",
+  "name": "nativescript-ble-peripheral",
   "version": "1.0.0",
   "description": "Your awesome NativeScript plugin.",
-  "main": "yourplugin",
+  "main": "ble-peripheral",
   "typings": "index.d.ts",
   "nativescript": {
     "platforms": {
@@ -18,13 +18,13 @@
     "test.ios": "cd demo && tns test ios --emulator",
     "test.ios.device": "cd demo && tns test ios",
     "test.android": "cd demo && tns test android",
-    "preparedemo": "npm run build && cd demo && tns plugin remove nativescript-yourplugin && tns plugin add .. && tns install",
+    "preparedemo": "npm run build && cd demo && tns plugin remove nativescript-ble-peripheral && tns plugin add .. && tns install",
     "setup": "npm i && cd demo && npm i && cd .. && npm run build && cd demo && tns plugin add .. && cd ..",
     "postclone": "npm i && node scripts/postclone.js"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/YourName/nativescript-yourplugin.git"
+    "url": "https://github.com/CTumminaro/nativescript-ble-peripheral.git"
   },
   "keywords": [
     "NativeScript",
@@ -37,10 +37,10 @@
     "email": "youremail@yourdomain.com"
   },
   "bugs": {
-    "url": "https://github.com/YourName/nativescript-yourplugin/issues"
+    "url": "https://github.com/CTumminaro/nativescript-ble-peripheral/issues"
   },
   "license": "MIT",
-  "homepage": "https://github.com/YourName/nativescript-yourplugin",
+  "homepage": "https://github.com/CTumminaro/nativescript-ble-peripheral",
   "readmeFilename": "README.md",
   "devDependencies": {
     "tns-core-modules": "~3.0.0",

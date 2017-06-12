@@ -1,14 +1,14 @@
 import {Observable} from 'data/observable';
-import {YourPlugin} from 'nativescript-yourplugin';
+import {BlePeripheral} from 'nativescript-ble-peripheral';
 
 export class HelloWorldModel extends Observable {
   public message: string;
-  private yourPlugin: YourPlugin;
+  private blePeripheral: BlePeripheral;
 
   constructor() {
     super();
 
-    this.yourPlugin = new YourPlugin();
-    this.message = this.yourPlugin.message;
+    this.blePeripheral = new BlePeripheral();
+    this.message = this.blePeripheral.message;
   }
 }
