@@ -1,3 +1,12 @@
-import { Common } from './ble-peripheral.common';
-export declare class BlePeripheral extends Common {
+export declare class BlePeripheral {
+    private _isEnabled(args);
+    isBluetoothEnabled(): Promise<{
+        Generic;
+    }>;
+    hasCoarseLocationPermission(): Promise<{
+        Generic;
+    }>;
+    requestCoarseLocationPermission(): Promise<{
+        Generic;
+    }>;
 }

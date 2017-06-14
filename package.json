@@ -1,9 +1,9 @@
 {
   "name": "nativescript-ble-peripheral",
   "version": "1.0.0",
-  "description": "Your awesome NativeScript plugin.",
+  "description": "Set up your device as a Bluetooth LE peripheral",
   "main": "ble-peripheral",
-  "typings": "index.d.ts",
+  "typings": "ble-peripheral.d.ts",
   "nativescript": {
     "platforms": {
       "android": "3.0.0",

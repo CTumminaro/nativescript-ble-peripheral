@@ -1,5 +1,5 @@
-import {Observable} from 'data/observable';
-import {BlePeripheral} from 'nativescript-ble-peripheral';
+import { Observable} from 'data/observable';
+import { BlePeripheral } from 'nativescript-ble-peripheral';
 
 export class HelloWorldModel extends Observable {
   public message: string;
@@ -9,6 +9,14 @@ export class HelloWorldModel extends Observable {
     super();
 
     this.blePeripheral = new BlePeripheral();
-    this.message = this.blePeripheral.message;
+
+    this.blePeripheral.isBluetoothEnabled().then((granted) => {
+      console.log("isBluetoothValid: ", granted);
+    });
+
+    this.blePeripheral.hasCoarseLocationPermission().then((granted) => {
+      console.log("hasCoarseLocationPermission", granted);
+
+    });
   }
 }
