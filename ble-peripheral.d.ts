@@ -8,3 +8,4 @@ export declare function hasCoarseLocationPermission(): Promise<{
 export declare function requestCoarseLocationPermission(): Promise<{
     Generic;
 }>;
+export declare function serviceCharacteristics(serviceUUID: any, characteristics: any): void;
