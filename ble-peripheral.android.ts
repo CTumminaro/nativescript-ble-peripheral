@@ -11,7 +11,8 @@ declare var android: any;
  */
 var ACCESS_COARSE_LOCATION_PERMISSION_REQUEST_CODE = 222;
 var bluetoothLeAdvertiser,
-    gattServer;
+    bluetoothGattServer,
+    connectedDevices = [];
 //public characteristicLogging: boolean = true;
 
 /**
@@ -98,7 +99,7 @@ var advertiseCallback = android.bluetooth.le.AdvertiseCallback.extend({
 
 export function startAdvertising(serviceUUID:string) {
   bluetoothLeAdvertiser = bluetoothAdapter.getBluetoothLeAdvertiser();
-  gattServer = bluetoothManager.openGattServer(utils.ad.getApplicationContext(), new gattServerCallback());
+  bluetoothGattServer = bluetoothManager.openGattServer(utils.ad.getApplicationContext(), new gattServerCallback());
 
  if (bluetoothLeAdvertiser != null) {
    var settings = new android.bluetooth.le.AdvertiseSettings.Builder()
@@ -122,18 +123,21 @@ export function startAdvertising(serviceUUID:string) {
  */
 var gattServerCallback = android.bluetooth.BluetoothGattServerCallback.extend({
   onConnectionStateChange: function(device, status, newState) {
-    console.log('device ', device);
-    /*if (newState == android.bluetooth.BluetoothProfile.STATE_CONNECTED)
+    if (newState == android.bluetooth.BluetoothProfile.STATE_CONNECTED)
       {
-          console.log("device:", device);
-          connectedDevice = device;
-          //connectedDevices.push(device);
+          connectedDevices.push(device);
+          console.log(connectedDevices);
       }
       else if (newState == android.bluetooth.BluetoothProfile.STATE_DISCONNECTED)
       {
         console.log('device disconnected');
+        connectedDevices = connectedDevices.filter((key) => {
+          console.log(!key.equals(device))
+          return !key.equals(device);
+        });
+        console.log(connectedDevices);
           //connectedDevices.remove(device);
-      }*/
+      }
   },
   onCharacteristicReadRequest: function(device, requestId, offset, characteristic) {
     console.log('onCharacteristicReadRequest');
@@ -196,5 +200,73 @@ var gattServerCallback = android.bluetooth.BluetoothGattServerCallback.extend({
        permissions));
    });
 
-  gattServer.addService(service);
+  bluetoothGattServer.addService(service);
  }
+
+ export function closeServer() {
+  if (bluetoothLeAdvertiser != null) {
+      bluetoothLeAdvertiser.stopAdvertising(advertiseCallback);
+      bluetoothLeAdvertiser = null;
+  }
+
+  if (bluetoothGattServer != null)
+  {
+      bluetoothGattServer.close();
+      bluetoothGattServer = null;
+  }
+}
+
+/**********************************
+ * Read/Write Characteristics
+ **********************************
+ */
+
+ function  _findCharacteristicOfType(bluetoothGattService, characteristicUUID, charType) {
+  var characteristics = bluetoothGattService.getCharacteristics();
+  for (var i = 0; i < characteristics.size(); i++) {
+    var c = characteristics.get(i);
+    if ((c.getProperties() & charType) !== 0 && characteristicUUID.equals(c.getUuid())) {
+      return c;
+    }
+  }
+  // As a last resort, try and find ANY characteristic with this UUID, even if it doesn't have the correct properties
+  return bluetoothGattService.getCharacteristic(characteristicUUID);
+};
+
+export function read(arg) {
+  return new Promise(function (resolve, reject) {
+    try {
+      var characteristic = bluetoothGattServer.getService(stringToUuid(arg.serviceUUID))
+              .getCharacteristic(stringToUuid(arg.characteristicUUID));
+
+      resolve(characteristic.getValue());
+
+    } catch (ex) {
+      console.log("Error in Bluetooth.read: " + ex);
+      reject(ex);
+    }
+  });
+};
+
+export function write(arg) {
+  return new Promise(function (resolve, reject) {
+    try {
+      var characteristic = bluetoothGattServer.getService(stringToUuid(arg.serviceUUID))
+              .getCharacteristic(stringToUuid(arg.characteristicUUID));
+
+      characteristic.setValue(arg.value, android.bluetooth.BluetoothGattCharacteristic.FORMAT_UINT8, 0);
+
+    } catch (ex) {
+      console.log("Error in Bluetooth.read: " + ex);
+      reject(ex);
+    }
+  });
+};
+
+export function notify(arg) {
+  connectedDevices.map((device) => {
+    var characteristic = bluetoothGattServer.getService(stringToUuid(arg.serviceUUID))
+            .getCharacteristic(stringToUuid(arg.characteristicUUID));
+    bluetoothGattServer.notifyCharacteristicChanged(device, characteristic, false);
+  });
+};
