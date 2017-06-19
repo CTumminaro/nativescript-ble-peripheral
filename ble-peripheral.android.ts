@@ -1,6 +1,7 @@
 import * as application from 'application';
 import * as utils from 'utils/utils';
 import { btoa, stringToUuid } from './helpers';
+import * as permissions from 'nativescript-permissions';
 
 /* Fix android for now */
 declare var android: any;
@@ -10,8 +11,8 @@ declare var android: any;
  **********************************
  */
 var ACCESS_COARSE_LOCATION_PERMISSION_REQUEST_CODE = 222;
-var bluetoothLeAdvertiser,
-    bluetoothGattServer,
+var bluetoothLeAdvertiser = null,
+    bluetoothGattServer = null,
     connectedDevices = [];
 //public characteristicLogging: boolean = true;
 
@@ -22,28 +23,35 @@ var bluetoothLeAdvertiser,
  var bluetoothAdapter = bluetoothManager.getAdapter();
 
 
+ function getContext() {
+ 	//noinspection JSUnresolvedVariable,JSUnresolvedFunction
+ 	var ctx = java.lang.Class.forName("android.app.AppGlobals").getMethod("getInitialApplication", null).invoke(null, null);
+ 	if (ctx) { return ctx; }
+
+ 	//noinspection JSUnresolvedVariable,JSUnresolvedFunction
+ 	return java.lang.Class.forName("android.app.ActivityThread").getMethod("currentApplication", null).invoke(null, null);
+ }
+
 /**********************************
  * Permissions
  **********************************
  */
 
 // Check if bluetooth is enabled
-function _isEnabled():Promise<{Generic}> {
-  console.log("adapter: ", bluetoothAdapter);
+function _isEnabled() {
   console.log("isEnabled: ", bluetoothAdapter.isEnabled());
   return bluetoothAdapter !== null && bluetoothAdapter.isEnabled();
 }
 
-export function isBluetoothEnabled():Promise<{Generic}> {
-  return new Promise(function (resolve, reject) {
-    try {
-      resolve(_isEnabled());
-    } catch (ex) {
-      console.log("Error in Bluetooth.isBluetoothEnabled: " + ex);
-      reject(ex);
-    }
-  });
-}
+export var isBluetoothEnabled = function () {
+  return _isEnabled();
+  /*try {
+    resolve(_isEnabled());
+  } catch (ex) {
+    console.log("Error in Bluetooth.isBluetoothEnabled: " + ex);
+    reject(ex);
+  }*/
+};
 
 
 // Check for Course Location Permissions
@@ -51,33 +59,29 @@ function _coarseLocationPermissionGranted() {
   var hasPermission = android.os.Build.VERSION.SDK_INT < 23; // Android M. (6.0)
   if (!hasPermission) {
     hasPermission = android.content.pm.PackageManager.PERMISSION_GRANTED ==
-      android.support.v4.content.ContextCompat.checkSelfPermission(application.android.foregroundActivity, android.Manifest.permission.ACCESS_COARSE_LOCATION);
-      console.log('hasPermission: ', hasPermission);
+      android.support.v4.content.ContextCompat.checkSelfPermission(getContext(), android.Manifest.permission.ACCESS_COARSE_LOCATION);
   }
+
+  console.log('hasPermission: ', hasPermission);
   return hasPermission;
 }
 
-export function hasCoarseLocationPermission():Promise<{Generic}> {
-  return new Promise(function (resolve) {
-    resolve(_coarseLocationPermissionGranted());
-  });
-}
+export function hasCoarseLocationPermission() {
+  return _coarseLocationPermissionGranted();
+};
 
 // Request Permissions
-export function requestCoarseLocationPermission():Promise<{Generic}> {
-  return new Promise(function (resolve) {
+export function requestCoarseLocationPermission(resolve, reject) {
+  try {
     if (!_coarseLocationPermissionGranted()) {
-      // in a future version we could hook up the callback and change this flow a bit
-      android.support.v4.app.ActivityCompat.requestPermissions(
-          application.android.foregroundActivity,
-          [android.Manifest.permission.ACCESS_COARSE_LOCATION],
-          ACCESS_COARSE_LOCATION_PERMISSION_REQUEST_CODE);
-      // this is not the nicest solution as the user needs to initiate scanning again after granting permission,
-      // so enhance this in a future version, but it's ok for now
-      resolve();
+      return permissions.requestPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION, "");
     }
-  });
-}
+  } catch(error) {
+    console.log("Error in Bluetooth.requestCoarseLocationPermission: " + error.error);
+    return reject(error);
+  }
+};
+
 
 /**********************************
  * Advertising
@@ -97,6 +101,8 @@ var advertiseCallback = android.bluetooth.le.AdvertiseCallback.extend({
     }
 });
 
+var myAdvertiseCallback = new advertiseCallback();
+
 export function startAdvertising(serviceUUID:string) {
   bluetoothLeAdvertiser = bluetoothAdapter.getBluetoothLeAdvertiser();
   bluetoothGattServer = bluetoothManager.openGattServer(utils.ad.getApplicationContext(), new gattServerCallback());
@@ -113,7 +119,7 @@ export function startAdvertising(serviceUUID:string) {
            .addServiceUuid(new android.os.ParcelUuid(stringToUuid(serviceUUID)))
            .build();
 
-   bluetoothLeAdvertiser.startAdvertising(settings, data, new advertiseCallback);
+   bluetoothLeAdvertiser.startAdvertising(settings, data, myAdvertiseCallback);
  }
 }
 
@@ -121,29 +127,33 @@ export function startAdvertising(serviceUUID:string) {
  * gattServerCallback Override
  **********************************
  */
+export var gattServerHook = {
+  onCharacteristicReadRequest: (device, requestId, offset, characteristic) => {},
+  onCharacteristicWriteRequest: (devices, requestId, characteristic, preparedWrite, responseNeeded, offset, value) => {}
+}
 var gattServerCallback = android.bluetooth.BluetoothGattServerCallback.extend({
   onConnectionStateChange: function(device, status, newState) {
     if (newState == android.bluetooth.BluetoothProfile.STATE_CONNECTED)
       {
-          connectedDevices.push(device);
-          console.log(connectedDevices);
+        console.log('device connected: ', device);
+        connectedDevices.push(device);
       }
       else if (newState == android.bluetooth.BluetoothProfile.STATE_DISCONNECTED)
       {
         console.log('device disconnected');
         connectedDevices = connectedDevices.filter((key) => {
-          console.log(!key.equals(device))
           return !key.equals(device);
         });
-        console.log(connectedDevices);
-          //connectedDevices.remove(device);
+
       }
   },
   onCharacteristicReadRequest: function(device, requestId, offset, characteristic) {
     console.log('onCharacteristicReadRequest');
+    gattServerHook.onCharacteristicReadRequest(device, requestId, offset, characteristic);
   },
   onCharacteristicWriteRequest: function (devices, requestId, characteristic, preparedWrite, responseNeeded, offset, value) {
     console.log('onCharacteristicWriteRequest');
+    gattServerHook.onCharacteristicWriteRequest(devices, requestId, characteristic, preparedWrite, responseNeeded, offset, value);
   }
 });
 
@@ -203,19 +213,6 @@ var gattServerCallback = android.bluetooth.BluetoothGattServerCallback.extend({
   bluetoothGattServer.addService(service);
  }
 
- export function closeServer() {
-  if (bluetoothLeAdvertiser != null) {
-      bluetoothLeAdvertiser.stopAdvertising(advertiseCallback);
-      bluetoothLeAdvertiser = null;
-  }
-
-  if (bluetoothGattServer != null)
-  {
-      bluetoothGattServer.close();
-      bluetoothGattServer = null;
-  }
-}
-
 /**********************************
  * Read/Write Characteristics
  **********************************
@@ -270,3 +267,20 @@ export function notify(arg) {
     bluetoothGattServer.notifyCharacteristicChanged(device, characteristic, false);
   });
 };
+
+/**********************************
+ * Shut down service
+ **********************************
+ */
+export function closeServer() {
+  console.log('closing');
+  if (bluetoothLeAdvertiser != null) {
+    bluetoothLeAdvertiser.stopAdvertising(myAdvertiseCallback);
+    bluetoothLeAdvertiser = null;
+  }
+
+  if (bluetoothGattServer != null) {
+    bluetoothGattServer.close();
+    bluetoothGattServer = null;
+  }
+}
