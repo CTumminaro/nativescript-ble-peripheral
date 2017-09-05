@@ -1,28 +1,48 @@
-export class BlePeripheral {
-  private _isEnabled(args) {
-    return true;
-  }
 
-  public isBluetoothEnabled():Promise<{Generic}> {
-    return new Promise(function (resolve, reject) {
-      try {
-        resolve(this._isEnabled());
-      } catch (ex) {
-        console.log("Error in Bluetooth.isBluetoothEnabled: " + ex);
-        reject(ex);
-      }
-    });
-  }
+import { btoa, stringToUuid } from './helpers';
 
-  public hasCoarseLocationPermission():Promise<{Generic}> {
-    return new Promise(function (resolve) {
-      resolve(true);
-    });
-  }
+/**********************************
+ * Varialbes
+ **********************************
+ */
+var _state = {
+  manager: null,
+  centralDelegate: null,
+  peripheralArray: null,
+  connectCallbacks: {},
+  disconnectCallbacks: {},
+  onDiscovered: null
+};
+declare var CBCentralManagerStatePoweredOn;
 
-  public requestCoarseLocationPermission():Promise<{Generic}> {
-    return new Promise(function (resolve) {
-      resolve(true);
-    });
-  }
+
+ /**********************************
+  * Start bluetoothManager and get adapter
+  **********************************
+  */
+
+
+/**********************************
+ * Permissions
+ **********************************
+ */
+
+// Check if bluetooth is enabled
+function _isEnabled() {
+  console.log("isEnabled: ", _state.manager.state);
+  return _state.manager.state == CBCentralManagerStatePoweredOn;
+}
+
+export var isBluetoothEnabled = function () {
+  return _isEnabled();
+};
+
+// Check for Course Location Permissions
+export function hasCoarseLocationPermission() {
+  return true;
+}
+
+// Request Permissions
+export function requestCoarseLocationPermission(resolve, reject) {
+
 }

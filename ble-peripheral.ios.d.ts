@@ -1,3 +1,5 @@
+declare var CBCentralManagerStatePoweredOn;
+
 export declare class BlePeripheral {
     private _isEnabled(args);
     isBluetoothEnabled(): Promise<{

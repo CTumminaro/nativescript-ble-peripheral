@@ -251,6 +251,7 @@ export function write(arg) {
       var characteristic = bluetoothGattServer.getService(stringToUuid(arg.serviceUUID))
               .getCharacteristic(stringToUuid(arg.characteristicUUID));
 
+      
       characteristic.setValue(arg.value, android.bluetooth.BluetoothGattCharacteristic.FORMAT_UINT8, 0);
 
     } catch (ex) {
